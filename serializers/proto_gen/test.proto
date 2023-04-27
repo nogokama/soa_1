@@ -1,0 +1,14 @@
+syntax = "proto3";
+
+package proto_gen;
+
+option go_package = "soa_hw/proto_gen";
+
+
+message TestStruct {
+  double float_field = 1;
+  int64 int_field = 2;
+  map<string, string> map_field = 3;
+  string string_field = 4;
+  repeated int32 array_field = 5;
+}
