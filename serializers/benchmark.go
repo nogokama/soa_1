@@ -6,7 +6,7 @@ import (
 )
 
 const (
-	benchMarkAttempts = 1000
+	benchMarkAttempts = 10000
 )
 
 func Benchmark(serializer Serializer) (serializedSize int, serializeTime time.Duration, deserializeTime time.Duration) {
@@ -28,11 +28,10 @@ func Benchmark(serializer Serializer) (serializedSize int, serializeTime time.Du
 		dRes = serializer.Deserialize(result, i)
 	}
 
+	deserializeTime = time.Since(startTime) / benchMarkAttempts
+
 	if !reflect.DeepEqual(dRes, test) {
 		panic("serialize and deserialize values are different")
 	}
-
-	deserializeTime = time.Since(startTime) / benchMarkAttempts
-
 	return
 }

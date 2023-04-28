@@ -1,0 +1,78 @@
+version: "3.9"
+services:
+  json:
+    build: .
+    command: --program worker --mode json --port 12001
+    networks:
+      - mynetwork
+    ports:
+      - "12001:12001/udp"
+  xml:
+    build: .
+    command: --program worker --mode xml --port 12002
+    networks:
+      - mynetwork
+    ports:
+      - "12002:12002/udp"
+  native:
+    build: .
+    command: --program worker --mode native --port 12003
+    networks:
+      - mynetwork
+    ports:
+      - "12003:12003/udp"
+  proto:
+    build: .
+    command: --program worker --mode proto --port 12004
+    networks:
+      - mynetwork
+    ports:
+      - "12004:12004/udp"
+  avro:
+    build: .
+    command: --program worker --mode avro --port 12005
+    networks:
+      - mynetwork
+    ports:
+      - "12005:12005/udp"
+  yaml:
+    build: .
+    command: --program worker --mode yaml --port 12006
+    networks:
+      - mynetwork
+    ports:
+      - "12006:12006/udp"
+  msgpack:
+    build: .
+    command: --program worker --mode msg_pack --port 12007
+    networks:
+      - mynetwork
+    ports:
+      - "12007:12007/udp"
+  proxy:
+    build: .
+    command:
+      - "--program"
+      - "proxy"
+      - "--port"
+      - "2000"
+      - "--json-port"
+      - "json:12001"
+      - "--xml-port"
+      - "xml:12002"
+      - "--native-port"
+      - "native:12003"
+      - "--proto-port"
+      - "proto:12004"
+      - "--avro-port"
+      - "avro:12005"
+      - "--yaml-port"
+      - "yaml:12006"
+      - "--msgpack-port"
+      - "msgpack:12007"
+    networks:
+      - mynetwork
+    ports:
+      - "2000:2000/udp"
+networks:
+  mynetwork:

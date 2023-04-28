@@ -12,6 +12,11 @@ const (
 	MsgPackMode = "msg_pack"
 )
 
+const (
+	ProgramProxy  = "proxy"
+	ProgramWorker = "worker"
+)
+
 func GetSerializer(mode string) serializer.Serializer {
 	var testSerializer serializer.Serializer
 	switch mode {
@@ -34,25 +39,4 @@ func GetSerializer(mode string) serializer.Serializer {
 	}
 
 	return testSerializer
-}
-
-func GetPort(mode string) int {
-	switch mode {
-	case JsonMode:
-		return 11001
-	case XmlMode:
-		return 11002
-	case NativeMode:
-		return 11003
-	case ProtoMode:
-		return 11004
-	case AvroMode:
-		return 11005
-	case YamlMode:
-		return 11006
-	case MsgPackMode:
-		return 11007
-	default:
-		panic("unknown mode")
-	}
 }
