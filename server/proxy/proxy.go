@@ -3,7 +3,10 @@ package proxy
 import (
 	"fmt"
 	"net"
+	"os"
+	"soa_hw/config"
 	"strings"
+	"time"
 )
 
 const (
@@ -15,18 +18,38 @@ func Launch(port int, workerPorts map[string]string) {
 	if err != nil {
 		panic(err)
 	}
+
 	defer conn.Close()
 
+	broadcastConn, err := makeBroadcastConn(os.Getenv(config.MulticastGroupAddr))
+	if err != nil {
+		panic(fmt.Errorf("failed to make broadcast conn: %w", err))
+	}
 	fmt.Println("Proxy listening on", conn.LocalAddr())
 
 	for {
-		listen(conn, workerPorts)
+		listen(conn, broadcastConn, workerPorts)
 	}
 }
 
-func listen(conn net.PacketConn, workerPorts map[string]string) {
+func makeBroadcastConn(address string) (*net.UDPConn, error) {
+	addr, err := net.ResolveUDPAddr("udp4", address)
+	if err != nil {
+		return nil, err
+	}
+
+	conn, err := net.DialUDP("udp4", nil, addr)
+	if err != nil {
+		return nil, err
+	}
+
+	return conn, nil
+
+}
+
+func listen(conn net.PacketConn, broadcastConn *net.UDPConn, workerPorts map[string]string) {
 	var answer string
-	buffer := make([]byte, 1024)
+	buffer := make([]byte, config.MaxDGRAMSize)
 	n, addr, err := conn.ReadFrom(buffer)
 	if err != nil {
 		answer = fmt.Sprintf("Error reading message: %v", err)
@@ -50,16 +73,56 @@ func listen(conn net.PacketConn, workerPorts map[string]string) {
 		fmt.Println(answer)
 		return
 	}
-
 	mode := strings.TrimSpace(messageParts[1])
+
+	if mode == config.MulticastMode {
+		answer = getMulticastResult(broadcastConn)
+		return
+	}
+
 	port, ok := workerPorts[mode]
 	if !ok {
-		answer = fmt.Sprintf("port not found for %s, len %d ", messageParts[1], len(messageParts[1]))
+		answer = fmt.Sprintf("port not found for %q\n", messageParts[1])
 		fmt.Println(answer)
 		return
 	}
 
 	answer = getResult(port)
+}
+
+func getMulticastResult(conn *net.UDPConn) string {
+	fmt.Println("getting multicast result")
+
+	answer := strings.Builder{}
+
+	_, err := conn.Write([]byte("kek hello"))
+	if err != nil {
+		panic(err)
+	}
+
+	buffer := make([]byte, config.MaxDGRAMSize)
+
+	doneChan := make(chan bool)
+
+	go func() {
+		n, _, err := conn.ReadFromUDP(buffer)
+		if err != nil {
+			panic(err)
+		}
+
+		answer.WriteString(string(buffer[:n]))
+
+		answer.WriteString("\n")
+		doneChan <- true
+	}()
+
+	select {
+	case <-doneChan:
+	case <-time.After(1 * time.Second):
+		answer.WriteString("timeouted")
+	}
+
+	return answer.String()
 }
 
 func getResult(port string) string {
@@ -78,7 +141,7 @@ func getResult(port string) string {
 		return ""
 	}
 
-	buffer := make([]byte, 1024)
+	buffer := make([]byte, config.MaxDGRAMSize)
 	bytesRead, err := conn.Read(buffer)
 	if err != nil {
 		fmt.Println("Failed to receive response:", err)
