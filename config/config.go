@@ -14,12 +14,17 @@ const (
 )
 
 const (
+	FormatsCount = 7
+)
+
+const (
 	ProgramProxy  = "proxy"
 	ProgramWorker = "worker"
 )
 
 const (
 	MulticastGroupAddr = "MULTICAST_GROUP_ADDR"
+	ProxyAnswersAddr   = "PROXY_ANSWERS"
 )
 
 const (

@@ -15,12 +15,12 @@ func Launch(mode string, port int) {
 	testSerializer := config.GetSerializer(mode)
 
 	multicastAddr := os.Getenv(config.MulticastGroupAddr)
-	listenAddr, err := net.ResolveUDPAddr("udp4", multicastAddr)
+	listenAddr, err := net.ResolveUDPAddr("udp", multicastAddr)
 	if err != nil {
 		panic(fmt.Errorf("failed to resolve udp addr: %w", err))
 	}
 
-	multicastConn, err := net.ListenMulticastUDP("udp4", nil, listenAddr)
+	multicastConn, err := net.ListenMulticastUDP("udp", nil, listenAddr)
 	if err != nil {
 		panic(err)
 	}
@@ -32,28 +32,28 @@ func Launch(mode string, port int) {
 
 	go func() {
 		defer wg.Done()
-		listenConnection(mode, multicastConn, testSerializer)
+		listenConnection(mode, multicastConn, testSerializer, true)
 	}()
 
-	ordinaryAddr, err := net.ResolveUDPAddr("udp4", fmt.Sprintf("0.0.0.0:%d", port))
+	ordinaryAddr, err := net.ResolveUDPAddr("udp", fmt.Sprintf("0.0.0.0:%d", port))
 	if err != nil {
 		panic(err)
 	}
 
-	ordinaryConn, err := net.ListenUDP("udp4", ordinaryAddr)
+	ordinaryConn, err := net.ListenUDP("udp", ordinaryAddr)
 	if err != nil {
 		panic(err)
 	}
 
 	go func() {
 		defer wg.Done()
-		listenConnection(mode, ordinaryConn, testSerializer)
+		listenConnection(mode, ordinaryConn, testSerializer, false)
 	}()
 
 	wg.Wait()
 }
 
-func listenConnection(mode string, conn *net.UDPConn, testSerializer serializer.Serializer) {
+func listenConnection(mode string, conn *net.UDPConn, testSerializer serializer.Serializer, isMulticast bool) {
 	fmt.Println("Server listening on", conn.LocalAddr())
 
 	for {
@@ -73,6 +73,16 @@ func listenConnection(mode string, conn *net.UDPConn, testSerializer serializer.
 		if err != nil {
 			fmt.Println("Error sending message: ", err)
 			continue
+		}
+
+		if isMulticast {
+			backAddr := os.Getenv(config.ProxyAnswersAddr)
+			conn, err := net.Dial("udp", backAddr)
+			if err != nil {
+				panic(err)
+			}
+
+			conn.Write([]byte(answer))
 		}
 
 		fmt.Println("Send answer:", answer)

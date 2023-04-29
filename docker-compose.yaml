@@ -9,6 +9,7 @@ services:
       - "12001:12001/udp"
     environment:
       MULTICAST_GROUP_ADDR: "239.0.0.1:8888"
+      PROXY_ANSWERS: "proxy:10000"
   xml:
     build: .
     command: --program worker --mode xml --port 12002
@@ -18,6 +19,7 @@ services:
       - "12002:12002/udp"
     environment:
       MULTICAST_GROUP_ADDR: "239.0.0.1:8888"
+      PROXY_ANSWERS: "proxy:10000"
   native:
     build: .
     command: --program worker --mode native --port 12003
@@ -27,6 +29,7 @@ services:
       - "12003:12003/udp"
     environment:
       MULTICAST_GROUP_ADDR: "239.0.0.1:8888"
+      PROXY_ANSWERS: "proxy:10000"
   proto:
     build: .
     command: --program worker --mode proto --port 12004
@@ -36,6 +39,7 @@ services:
       - "12004:12004/udp"
     environment:
       MULTICAST_GROUP_ADDR: "239.0.0.1:8888"
+      PROXY_ANSWERS: "proxy:10000"
   avro:
     build: .
     command: --program worker --mode avro --port 12005
@@ -45,6 +49,7 @@ services:
       - "12005:12005/udp"
     environment:
       MULTICAST_GROUP_ADDR: "239.0.0.1:8888"
+      PROXY_ANSWERS: "proxy:10000"
   yaml:
     build: .
     command: --program worker --mode yaml --port 12006
@@ -54,6 +59,7 @@ services:
       - "12006:12006/udp"
     environment:
       MULTICAST_GROUP_ADDR: "239.0.0.1:8888"
+      PROXY_ANSWERS: "proxy:10000"
   msgpack:
     build: .
     command: --program worker --mode msg_pack --port 12007
@@ -63,6 +69,7 @@ services:
       - "12007:12007/udp"
     environment:
       MULTICAST_GROUP_ADDR: "239.0.0.1:8888"
+      PROXY_ANSWERS: "proxy:10000"
   proxy:
     build: .
     command:
@@ -90,5 +97,6 @@ services:
       - "2000:2000/udp"
     environment:
       MULTICAST_GROUP_ADDR: "239.0.0.1:8888"
+      PROXY_ANSWERS: "0.0.0.0:10000"
 networks:
   mynetwork:

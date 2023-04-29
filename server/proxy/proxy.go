@@ -6,7 +6,6 @@ import (
 	"os"
 	"soa_hw/config"
 	"strings"
-	"time"
 )
 
 const (
@@ -27,18 +26,36 @@ func Launch(port int, workerPorts map[string]string) {
 	}
 	fmt.Println("Proxy listening on", conn.LocalAddr())
 
+	answersChan := make(chan string, 100)
+
+	go listenAnswers(answersChan)
+
 	for {
-		listen(conn, broadcastConn, workerPorts)
+		listen(conn, broadcastConn, workerPorts, answersChan)
 	}
 }
 
-func makeBroadcastConn(address string) (*net.UDPConn, error) {
-	addr, err := net.ResolveUDPAddr("udp4", address)
+func listenAnswers(answersChan chan string) {
+	proxyAddress := os.Getenv(config.ProxyAnswersAddr)
+	addr, err := net.ResolveUDPAddr("udp", proxyAddress)
+	conn, err := net.ListenUDP("udp", addr)
 	if err != nil {
-		return nil, err
+		panic(err)
 	}
 
-	conn, err := net.DialUDP("udp4", nil, addr)
+	buffer := make([]byte, config.MaxDGRAMSize)
+	for {
+		n, _, err := conn.ReadFromUDP(buffer)
+		if err != nil {
+			panic(err)
+		}
+
+		answersChan <- string(buffer[:n])
+	}
+}
+
+func makeBroadcastConn(address string) (net.Conn, error) {
+	conn, err := net.Dial("udp", address)
 	if err != nil {
 		return nil, err
 	}
@@ -47,7 +64,7 @@ func makeBroadcastConn(address string) (*net.UDPConn, error) {
 
 }
 
-func listen(conn net.PacketConn, broadcastConn *net.UDPConn, workerPorts map[string]string) {
+func listen(conn net.PacketConn, broadcastConn net.Conn, workerPorts map[string]string, answersChan chan string) {
 	var answer string
 	buffer := make([]byte, config.MaxDGRAMSize)
 	n, addr, err := conn.ReadFrom(buffer)
@@ -76,7 +93,7 @@ func listen(conn net.PacketConn, broadcastConn *net.UDPConn, workerPorts map[str
 	mode := strings.TrimSpace(messageParts[1])
 
 	if mode == config.MulticastMode {
-		answer = getMulticastResult(broadcastConn)
+		answer = getMulticastResult(broadcastConn, answersChan)
 		return
 	}
 
@@ -90,36 +107,18 @@ func listen(conn net.PacketConn, broadcastConn *net.UDPConn, workerPorts map[str
 	answer = getResult(port)
 }
 
-func getMulticastResult(conn *net.UDPConn) string {
+func getMulticastResult(conn net.Conn, answersChan chan string) string {
 	fmt.Println("getting multicast result")
 
 	answer := strings.Builder{}
 
-	_, err := conn.Write([]byte("kek hello"))
+	_, err := conn.Write([]byte("multicast hello"))
 	if err != nil {
 		panic(err)
 	}
 
-	buffer := make([]byte, config.MaxDGRAMSize)
-
-	doneChan := make(chan bool)
-
-	go func() {
-		n, _, err := conn.ReadFromUDP(buffer)
-		if err != nil {
-			panic(err)
-		}
-
-		answer.WriteString(string(buffer[:n]))
-
-		answer.WriteString("\n")
-		doneChan <- true
-	}()
-
-	select {
-	case <-doneChan:
-	case <-time.After(1 * time.Second):
-		answer.WriteString("timeouted")
+	for i := 0; i < config.FormatsCount; i++ {
+		answer.WriteString(<-answersChan)
 	}
 
 	return answer.String()
