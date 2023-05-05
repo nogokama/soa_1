@@ -1,2 +1,2 @@
 set -ex
-docker-compose build
+sudo docker-compose build
